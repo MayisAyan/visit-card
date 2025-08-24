@@ -29,6 +29,12 @@ public class CompanyController {
         this.companyService = companyService;
     }
 
+    @GetMapping("/by-admin/{adminId}")
+    public ResponseEntity<List<Company>> getCompaniesByAdmin(@PathVariable Long adminId) {
+        List<Company> companies = companyService.getCompaniesByAdminId(adminId);
+        return companies.isEmpty() ? ResponseEntity.notFound().build() : ResponseEntity.ok(companies);
+    }
+
     @PostMapping("/create")
     public ResponseEntity<Company> createCompany(@RequestBody Company company, @RequestParam String adminLogin) {
         try {
