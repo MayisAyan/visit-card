@@ -13,4 +13,5 @@ public class CompanyDto {
     private String logoUrl;
     private String description;
     private List<StaffDto> staffList;
+    private String originalLogoUrl;
 }

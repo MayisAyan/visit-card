@@ -28,6 +28,7 @@ public class CompanyService {
         for (Staff staff : company.getStaffList()) {
             staff.setCompany(company);
         }
+        company.setAdmin(admin);
         Company savedCompany = companyRepository.save(company);
         System.out.println("Company saved with ID: " + savedCompany.getId());
         String logoBase64 = company.getLogoUrl();
@@ -56,7 +57,6 @@ public class CompanyService {
                 }
             }
         }
-        company.setAdmin(admin);
         return companyRepository.save(savedCompany);
     }
 
@@ -77,6 +77,21 @@ public class CompanyService {
 
         existing.setName(company.getName());
         existing.setDescription(company.getDescription());
+        String logoBase64 = company.getLogoUrl();
+        if (logoBase64 != null && !logoBase64.isEmpty()) {
+            try {
+                if (isBase64String(logoBase64)) {
+                    String savedPath = imageService.saveLogoImage(logoBase64, id);
+                    existing.setLogoUrl(savedPath);
+                } else {
+                    existing.setLogoUrl(logoBase64);
+                }
+            } catch (Exception e) {
+                System.out.println("Error processing logo: " + e.getMessage());
+            }
+        } else {
+            System.out.println("No logo data provided, keeping existing logo");
+        }
         existing.getStaffList().clear();
         System.out.println("Cleared existing staff list");
         if (company.getStaffList() != null) {
@@ -85,9 +100,14 @@ public class CompanyService {
                 String staffPhotoBase64 = staff.getPhoto();
                 if (staffPhotoBase64 != null && !staffPhotoBase64.isEmpty()) {
                     try {
-                        String savedPath = imageService.saveStaffImage(staffPhotoBase64, id, staff.getName());
-                        staff.setPhoto(savedPath);
-                        System.out.println("Staff photo path set for " + staff.getName() + ": " + savedPath);
+                        if (isBase64String(staffPhotoBase64)) {
+                            String savedPath = imageService.saveStaffImage(staffPhotoBase64, id, staff.getName());
+                            staff.setPhoto(savedPath);
+                            System.out.println("Staff photo path set for " + staff.getName() + ": " + savedPath);
+                        } else {
+                            staff.setPhoto(staffPhotoBase64);
+                            System.out.println("Staff photo for " + staff.getName() + " kept as existing path");
+                        }
                     } catch (Exception e) {
                         System.out.println("Error saving staff photo for " + staff.getName() + ": " + e.getMessage());
                         staff.setPhoto(null);
@@ -120,6 +140,7 @@ public class CompanyService {
         } else {
             dto.setPhotoBase64(null);
         }
+        dto.setOriginalPhoto(staff.getPhoto());
         return dto;
     }
 
@@ -144,6 +165,7 @@ public class CompanyService {
             dto.setLogoUrl(null);
             System.out.println("No logo found for company ID " + id);
         }
+        dto.setOriginalLogoUrl(company.getLogoUrl());
         List<StaffDto> staffDtos = new ArrayList<>();
         if (company.getStaffList() != null) {
             for (Staff staff : company.getStaffList()) {
@@ -168,5 +190,15 @@ public class CompanyService {
             }
         }
         companyRepository.deleteById(id);
+    }
+
+    private boolean isBase64String(String str) {
+        if (str == null || str.isEmpty()) {
+            return false;
+        }
+        if (str.contains(",")) {
+            str = str.substring(str.indexOf(",") + 1);
+        }
+        return str.matches("^[A-Za-z0-9+/]*={0,2}$") && str.length() % 4 == 0;
     }
 }
