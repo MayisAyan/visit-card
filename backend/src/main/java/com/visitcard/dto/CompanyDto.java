@@ -10,7 +10,8 @@ import java.util.List;
 public class CompanyDto {
     private Long id;
     private String name;
-    private String logoUrl;
+    private String logoUrl;      // Base64 encoded logo for frontend display
     private String description;
     private List<StaffDto> staffList;
+    private String logoFilePath; // File path stored in database (optional, for debugging)
 }

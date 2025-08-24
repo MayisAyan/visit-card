@@ -85,11 +85,18 @@ public class CompanyService {
                 String staffPhotoBase64 = staff.getPhoto();
                 if (staffPhotoBase64 != null && !staffPhotoBase64.isEmpty()) {
                     try {
-                        String savedPath = imageService.saveStaffImage(staffPhotoBase64, id, staff.getName());
-                        staff.setPhoto(savedPath);
-                        System.out.println("Staff photo path set for " + staff.getName() + ": " + savedPath);
+                        // Check if it's base64 data or already a file path
+                        if (isBase64String(staffPhotoBase64)) {
+                            String savedPath = imageService.saveStaffImage(staffPhotoBase64, id, staff.getName());
+                            staff.setPhoto(savedPath);
+                            System.out.println("Staff photo path set for " + staff.getName() + ": " + savedPath);
+                        } else {
+                            // It's already a file path, keep it as is
+                            staff.setPhoto(staffPhotoBase64);
+                            System.out.println("Staff photo path kept for " + staff.getName() + ": " + staffPhotoBase64);
+                        }
                     } catch (Exception e) {
-                        System.out.println("Error saving staff photo for " + staff.getName() + ": " + e.getMessage());
+                        System.out.println("Error processing staff photo for " + staff.getName() + ": " + e.getMessage());
                         staff.setPhoto(null);
                     }
                 }
@@ -106,13 +113,13 @@ public class CompanyService {
         dto.setName(staff.getName());
         dto.setPhoneNumber(staff.getPhoneNumber());
         dto.setPosition(staff.getPosition());
+        dto.setPhotoUrl(staff.getPhoto()); // Set the file path for debugging/reference
+        
         if (staff.getPhoto() != null && !staff.getPhoto().isEmpty()) {
             try {
-                if(staff.getPhoto() == null){
-                    System.out.println("Error: photo is null");
-                }
                 String base64 = imageService.filePathToBase64(staff.getPhoto());
                 dto.setPhotoBase64(base64);
+                System.out.println("Staff photo converted to base64 for " + staff.getName());
             } catch (Exception e) {
                 System.out.println("Error converting staff photo to base64 for " + staff.getName() + ": " + e.getMessage());
                 dto.setPhotoBase64(null);
@@ -131,6 +138,8 @@ public class CompanyService {
         dto.setId(company.getId());
         dto.setName(company.getName());
         dto.setDescription(company.getDescription());
+        dto.setLogoFilePath(company.getLogoUrl()); // Set the file path for debugging/reference
+        
         if (company.getLogoUrl() != null && !company.getLogoUrl().isEmpty()) {
             try {
                 String base64 = imageService.filePathToBase64(company.getLogoUrl());
