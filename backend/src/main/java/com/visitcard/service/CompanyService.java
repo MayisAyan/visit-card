@@ -25,6 +25,7 @@ public class CompanyService {
 
     @Transactional
     public Company createCompany(Company company, Admin admin) {
+        company.setAdmin(admin);
         for (Staff staff : company.getStaffList()) {
             staff.setCompany(company);
         }
@@ -33,7 +34,9 @@ public class CompanyService {
         String logoBase64 = company.getLogoUrl();
         if (logoBase64 != null && !logoBase64.isEmpty()) {
             try {
-                String savedPath = imageService.saveLogoImage(logoBase64, savedCompany.getId());
+                String savedPath = isBase64String(logoBase64)
+                        ? imageService.saveLogoImage(logoBase64, savedCompany.getId())
+                        : logoBase64;
                 savedCompany.setLogoUrl(savedPath);
                 System.out.println("Logo path set: " + savedPath);
             } catch (Exception e) {
@@ -47,7 +50,9 @@ public class CompanyService {
             String staffPhotoBase64 = staff.getPhoto();
             if (staffPhotoBase64 != null && !staffPhotoBase64.isEmpty()) {
                 try {
-                    String savedPath = imageService.saveStaffImage(staffPhotoBase64, savedCompany.getId(), staff.getName());
+                    String savedPath = isBase64String(staffPhotoBase64)
+                            ? imageService.saveStaffImage(staffPhotoBase64, savedCompany.getId(), staff.getName())
+                            : staffPhotoBase64;
                     staff.setPhoto(savedPath);
                     System.out.println("Staff photo path set for " + staff.getName() + ": " + savedPath);
                 } catch (Exception e) {
@@ -56,7 +61,6 @@ public class CompanyService {
                 }
             }
         }
-        company.setAdmin(admin);
         return companyRepository.save(savedCompany);
     }
 
@@ -69,6 +73,10 @@ public class CompanyService {
         return companyRepository.findAll();
     }
 
+    public List<Company> getCompaniesByAdminId(Long adminId) {
+        return companyRepository.findByAdmin_Id(adminId);
+    }
+
     @Transactional
     public Company updateCompany(Long id, Company company) {
         Company existing = companyRepository.findById(id)
@@ -77,6 +85,21 @@ public class CompanyService {
 
         existing.setName(company.getName());
         existing.setDescription(company.getDescription());
+        String logoData = company.getLogoUrl();
+        if (logoData != null && !logoData.isEmpty()) {
+            try {
+                if (isBase64String(logoData)) {
+                    String savedPath = imageService.saveLogoImage(logoData, id);
+                    existing.setLogoUrl(savedPath);
+                } else {
+                    existing.setLogoUrl(logoData);
+                }
+            } catch (Exception e) {
+                System.out.println("Error processing logo: " + e.getMessage());
+            }
+        } else {
+            System.out.println("No logo data provided, keeping existing logo");
+        }
         existing.getStaffList().clear();
         System.out.println("Cleared existing staff list");
         if (company.getStaffList() != null) {
@@ -85,7 +108,9 @@ public class CompanyService {
                 String staffPhotoBase64 = staff.getPhoto();
                 if (staffPhotoBase64 != null && !staffPhotoBase64.isEmpty()) {
                     try {
-                        String savedPath = imageService.saveStaffImage(staffPhotoBase64, id, staff.getName());
+                        String savedPath = isBase64String(staffPhotoBase64)
+                                ? imageService.saveStaffImage(staffPhotoBase64, id, staff.getName())
+                                : staffPhotoBase64;
                         staff.setPhoto(savedPath);
                         System.out.println("Staff photo path set for " + staff.getName() + ": " + savedPath);
                     } catch (Exception e) {
@@ -168,5 +193,15 @@ public class CompanyService {
             }
         }
         companyRepository.deleteById(id);
+    }
+
+    private boolean isBase64String(String str) {
+        if (str == null || str.isEmpty()) {
+            return false;
+        }
+        if (str.contains(",")) {
+            str = str.substring(str.indexOf(",") + 1);
+        }
+        return str.matches("^[A-Za-z0-9+/]*={0,2}$") && str.length() % 4 == 0;
     }
 }
