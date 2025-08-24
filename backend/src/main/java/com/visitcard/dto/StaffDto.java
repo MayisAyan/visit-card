@@ -12,4 +12,5 @@ public class StaffDto {
     private String phoneNumber;
     private String position;
     private String photoBase64;
+    private String originalPhoto;
 }
